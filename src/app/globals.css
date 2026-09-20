@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --card: #f1f5f9;
+  --border: #e2e8f0;
+  --foreground: #0f172a;
+  --muted: #e2e8f0;
+  --muted-foreground: #64748b;
+
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(15, 23, 42, 0.1);
+  --glass-shadow: rgba(15, 23, 42, 0.08);
+
+  --scrollbar-track: #e8edf4;
+  --scrollbar-thumb: #c3ccdb;
+  --scrollbar-thumb-hover: #9aa8bd;
+}
+
+.dark {
+  --background: #070b14;
+  --surface: #0f172a;
+  --card: #0c1222;
+  --border: #1e293b;
+  --foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+
+  --glass-bg: rgba(15, 23, 42, 0.75);
+  --glass-border: rgba(99, 102, 241, 0.12);
+  --glass-shadow: rgba(0, 0, 0, 0.37);
+
+  --scrollbar-track: #090d16;
+  --scrollbar-thumb: #1e293b;
+  --scrollbar-thumb-hover: #334155;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Glassmorphic card styling (theme-aware) */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
+}
+
+.glass-panel-glow {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 30px -5px rgba(99, 102, 241, 0.2);
+}
+
+/* Animated gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1 0%, #0891b2 50%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-2xl;
+  }
+  .input {
+    @apply w-full px-3.5 py-2.5 rounded-xl bg-card border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-indigo/60 transition-colors;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all;
+  }
+  .btn-primary {
+    @apply bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-500 text-white shadow-glow hover:opacity-95;
+  }
+  .btn-secondary {
+    @apply bg-surface border border-border text-foreground hover:border-accent-indigo/50 hover:bg-card;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border;
+  }
+  .badge-success {
+    @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20;
+  }
+  .badge-warning {
+    @apply bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20;
+  }
+  .badge-danger {
+    @apply bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20;
+  }
+  .badge-accent {
+    @apply bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 border-indigo-500/20;
+  }
+  .badge-neutral {
+    @apply bg-card text-muted-foreground border-border;
+  }
+}

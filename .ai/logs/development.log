@@ -1,0 +1,121 @@
+# EduPath AI — Development Log
+
+2026-09-20T00:20:00+05:30
+Phase: Phase 1 — Project Inception & .ai Documentation Suite
+Change:
+- Established core .ai specification files (PRD, RULES, ARCHITECTURE, AGENTS, DATABASE, API, UI, EVALUATION, DEMO)
+- Prepared development log structure for continuous auditability
+Files Modified:
+- .ai/PRD.md
+- .ai/RULES.md
+- .ai/ARCHITECTURE.md
+- .ai/AGENTS.md
+- .ai/DATABASE.md
+- .ai/API.md
+- .ai/UI.md
+- .ai/EVALUATION.md
+- .ai/DEMO.md
+- .ai/logs/development.log
+Reason:
+- Satisfy Phase 1 requirements from Master Prompt Section 34 & 35
+Tests:
+- Documentation files verified and synchronized with master plan
+Next Step:
+- Phase 2: Initialize Next.js project structure, package dependencies, Tailwind CSS, and Prisma schema
+
+---
+
+2026-09-20T00:40:00+05:30
+Phase: Phase 2 & 3 — Database, Multi-Agent Architecture, API Layer & Full-Stack UI
+Change:
+- Implemented Prisma schema with 19 relational entities (PostgreSQL/SQLite dual-compatible)
+- Seeded database with 7 roles, full skill dependency DAG, curated resources, and demo learner (Ilakkiyan)
+- Implemented universal AIProvider abstraction (Gemini, OpenAI, Mock deterministic fallback)
+- Implemented all 8 specialized agents with strict Zod schema validation
+- Implemented complete REST API suite (/api/profile, /api/gaps, /api/skills, /api/roadmap, /api/tasks, /api/chat, /api/agent/events, /api/projects, /api/demo/reset)
+- Built high-impact dark glassmorphic UI across 10 pages and responsive components
+- Verified production build and end-to-end adaptive demo loop
+Files Modified:
+- prisma/schema.prisma
+- prisma/seed.ts
+- src/ai/providers/*
+- src/ai/schemas/*
+- src/ai/agents/*
+- src/app/api/*
+- src/app/*
+- src/components/*
+- README.md
+Reason:
+- Complete P0 and P1 product scope for EduPath AI platform
+Tests:
+- `npx prisma generate` & `npx prisma db push`: Passed (19 models synced)
+- `npx tsx prisma/seed.ts`: Passed (7 roles, skills, DAG, and demo learner seeded)
+- `npx tsc --noEmit`: Passed with zero TypeScript errors
+- `npm run build`: Passed (all 25 static & dynamic routes compiled)
+- End-to-end task submission evaluation & dynamic roadmap adaptation tested with live HTTP requests:
+  - EvaluationAgent scored 54% on flawed weather tool
+  - AdaptationAgent triggered prerequisite injection (Tool Reliability & Agent Guardrails)
+  - Assistant answered "Why did you change my roadmap?" with exact evidence citations
+Next Step:
+- Project ready for user presentation and live demo evaluation
+
+---
+
+2026-09-20T02:30:00+05:30
+Phase: Phase 1-4 Finish (leftovers) + Phase 5 — Learner Memory & Phase 6 — UI Polish
+Change:
+- Restored auditability: appended this log entry covering the late auth/UI commits and this memory phase
+- Leftover (Phase 1, RULES.md:26): server-side file-upload guardrails — MIME-type allowlist, 10 MB size cap, and real DOCX parsing via new dependency `mammoth`
+- Leftover (Phase 1/3, MVP Must-Have #7): day-by-day **Weekly Learning Plan** component (Mon–Sun) auto-derived from the active milestone, its tasks, and latest evaluation feedback; embedded on /roadmap
+- Phase 5 — Memory: task submission now writes `ProgressHistory` rows (task_score / skill_confidence / readiness) and maintains `LearnerMemory` **weak_area** (confidence decays on repeat failures) and **strong_area** (confidence grows on demonstrated passes); ChatAgent grounds answers in persistent learner memory
+- Phase 5 — new `/api/progress` endpoint surfacing readiness trajectory, evaluation series, and weak/strong memory; `/progress` page rewritten as an auto-generated **WEEK N PROGRESS REPORT** (skills acquired / improving / needs attention + agent recommendation) and persistent-memory panels
+- Phase 6 — Skill graph is now **data-driven**: tiers computed from the DB dependency DAG via longest-path (Kahn-style) layering instead of hard-coded tiers; framer-motion entrance animations added (was installed but unused)
+Files Modified:
+- prisma/seed.ts (dependency context verified)
+- src/app/api/profile/analyze/route.ts
+- src/app/api/tasks/[id]/submit/route.ts
+- src/app/api/chat/route.ts
+- src/app/api/progress/route.ts (new)
+- src/ai/agents/chat-agent.ts
+- src/components/weekly-plan.tsx (new)
+- src/app/roadmap/page.tsx
+- src/app/progress/page.tsx
+- src/app/skills/page.tsx
+- src/app/dashboard/page.tsx
+- src/types/mammoth.d.ts (new)
+- package.json / package-lock.json (mammoth dependency)
+- .ai/logs/development.log
+Reason:
+- Close out leftover scope from Phases 1-4 and complete Phase 5 (Memory) and Phase 6 (UI polish) per the master plan
+Tests:
+- `npx tsc --noEmit`: Passed (zero TypeScript errors)
+- `npm run lint`: Passed (zero ESLint warnings/errors)
+- `npm run build`: Passed (29 routes compiled)
+- Live smoke tests against dev server: `/api/progress` returned readiness/memory/evaluation telemetry; `/api/skills` returned 15 skills + 15 dependencies feeding the graph layering; `/api/roadmap` + `/api/tasks` confirmed weekly-plan inputs (in_progress Week 2 milestone + matching task)
+Known Limitations:
+- `/api/*` route handlers still resolve the demo learner via `findFirst()`; middleware guards pages only. Per-user API scoping is documented as a follow-up hardening item.
+- Development log previously fell behind git history (auth + UI commits); now synced.
+
+---
+
+2026-09-20T03:00:00+05:30
+Phase: Hardening — Per-User API Scoping & Cleanup
+Change:
+- Removed limitation: all 14 `/api/*` route handlers now resolve the learner from the authenticated session (`session.user.id`) via new `getCurrentProfileId()` helper; demo `findFirst()` lookups eliminated.
+- Rewrote `src/middleware.ts`: `getToken`-based; returns JSON 401 for `/api/*` except `/api/auth/*`; redirects unauthenticated pages to `/signin` with callbackUrl. Fixed a redirect bug where the fallthrough page branch was catching `/api/auth/*` and redirecting NextAuth endpoints to `/signin`, breaking login.
+- Marked all session-dependent route handlers `export const dynamic = 'force-dynamic'` to stop Next from attempting static prerender of routes using `headers()` (silenced build-time "Dynamic server usage" noise; all API routes now render as `ƒ`).
+- Deleted stray prisma probe `test-events.ts` from repo root.
+- `src/app/api/gaps/analyze/route.ts`: `targetRoleId` now `roleId || profile.targetRoleId || undefined` (previously `string|null` failed the `findUnique` typed where clause and degraded type inference).
+Files Modified:
+- src/middleware.ts
+- src/lib/auth.ts
+- src/app/api/{profile,profile/analyze,agent/events,roadmap,roadmap/generate,tasks,tasks/[id],tasks/[id]/submit,gaps/analyze,projects,progress,skills,chat,demo/reset}/route.ts
+- .ai/logs/development.log
+- (deleted) test-events.ts
+Tests:
+- `npx tsc --noEmit`: Passed (zero TypeScript errors)
+- `npm run lint`: Passed (zero ESLint warnings/errors)
+- `npm run build`: Passed (clean 29-route build, no "Dynamic server usage" errors; all API routes `ƒ`)
+- Live smoke test: unauthenticated `GET /api/profile` -> 401 JSON `{"success":false,"error":"Unauthorized"}`; NextAuth credentials login via `/api/auth/csrf` + `/api/auth/callback/credentials` -> 200 and session cookie; authenticated `/api/profile` (200, demo profile id/readiness 68), `/api/tasks` (200, 2 tasks), `/api/roadmap` (200) all return only the signed-in user's data.
+Next Step:
+- None (all documented limitations resolved; platform ready for production evaluation)

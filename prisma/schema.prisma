@@ -1,0 +1,302 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  name         String
+  passwordHash String?
+  avatarUrl    String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  profile      LearnerProfile?
+}
+
+model LearnerProfile {
+  id               String              @id @default(cuid())
+  userId           String              @unique
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetRoleId     String?
+  targetRole       Role?               @relation(fields: [targetRoleId], references: [id])
+  experienceLevel  String              @default("entry") // entry, junior, mid, senior
+  summary          String?
+  careerReadiness  Int                 @default(0) // 0 to 100 percentage
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  preference       LearnerPreference?
+  skills           LearnerSkill[]
+  gaps             SkillGap[]
+  roadmaps         Roadmap[]
+  tasks            Task[]
+  submissions      TaskSubmission[]
+  memories         LearnerMemory[]
+  events           AgentEvent[]
+  projects         GeneratedProject[]
+}
+
+model LearnerPreference {
+  id                String         @id @default(cuid())
+  profileId         String         @unique
+  profile           LearnerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  weeklyHours       Int            @default(15)
+  preferredStyle    String         @default("hands-on") // hands-on, visual, reading, fast-paced
+  careerGoal        String?
+  difficulty        String         @default("moderate") // easy, moderate, challenging
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  title       String
+  description String
+  profiles    LearnerProfile[]
+  roleSkills  RoleSkill[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Skill {
+  id              String            @id @default(cuid())
+  slug            String            @unique
+  name            String
+  category        String // foundation, core, advanced, production
+  description     String?
+  roleSkills      RoleSkill[]
+  learnerSkills   LearnerSkill[]
+  gaps            SkillGap[]
+  resources       LearningResource[]
+  prerequisites   SkillDependency[] @relation("PrerequisiteSkill")
+  dependents      SkillDependency[] @relation("TargetSkill")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model RoleSkill {
+  id            String   @id @default(cuid())
+  roleId        String
+  skillId       String
+  requiredLevel Int      @default(3) // 1 to 5
+  importance    String   @default("high") // core, critical, elective
+  role          Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  skill         Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([roleId, skillId])
+}
+
+model SkillDependency {
+  id             String   @id @default(cuid())
+  prerequisiteId String
+  targetSkillId  String
+  prerequisite   Skill    @relation("PrerequisiteSkill", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+  targetSkill    Skill    @relation("TargetSkill", fields: [targetSkillId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([prerequisiteId, targetSkillId])
+}
+
+model LearnerSkill {
+  id          String          @id @default(cuid())
+  profileId   String
+  skillId     String
+  level       Int             @default(1) // 1 to 5
+  confidence  Float           @default(0.5) // 0.0 to 1.0
+  profile     LearnerProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill       Skill           @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  evidence    SkillEvidence[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([profileId, skillId])
+}
+
+model SkillEvidence {
+  id             String       @id @default(cuid())
+  learnerSkillId String
+  source         String // resume, evaluation, project, self-claim
+  snippet        String
+  confidence     Float        @default(0.8)
+  learnerSkill   LearnerSkill @relation(fields: [learnerSkillId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+}
+
+model SkillGap {
+  id            String         @id @default(cuid())
+  profileId     String
+  skillId       String
+  currentLevel  Int            @default(0)
+  requiredLevel Int            @default(3)
+  gapLevel      String         @default("moderate") // acquired, developing, moderate, high, critical
+  confidence    Float          @default(0.8)
+  reason        String?
+  profile       LearnerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill         Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([profileId, skillId])
+}
+
+model Roadmap {
+  id            String              @id @default(cuid())
+  profileId     String
+  title         String
+  totalWeeks    Int                 @default(6)
+  status        String              @default("active") // active, archived, completed
+  profile       LearnerProfile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  items         RoadmapItem[]
+  adaptations   RoadmapAdaptation[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model RoadmapItem {
+  id              String      @id @default(cuid())
+  roadmapId       String
+  weekNumber      Int
+  orderIndex      Int         @default(0)
+  title           String
+  description     String
+  targetSkills    String // Comma-separated or JSON string
+  estimatedHours  Int         @default(10)
+  status          String      @default("pending") // pending, in_progress, completed, adapted, skipped
+  adaptationNote  String?
+  roadmap         Roadmap     @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  tasks           Task[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model RoadmapAdaptation {
+  id           String   @id @default(cuid())
+  roadmapId    String
+  triggerType  String // weak_evaluation, mastered_skill, constraint_change
+  reason       String
+  evidence     String
+  diffSummary  String // Description of before -> after
+  roadmap      Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model LearningResource {
+  id              String   @id @default(cuid())
+  skillId         String
+  title           String
+  type            String // documentation, video, article, course, tutorial, exercise
+  url             String
+  difficulty      String   @default("intermediate") // beginner, intermediate, advanced
+  estimatedMinutes Int     @default(30)
+  reason          String // Explains "Why this resource?"
+  skill           Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Task {
+  id                 String           @id @default(cuid())
+  profileId          String
+  roadmapItemId      String?
+  title              String
+  description        String
+  difficulty         String           @default("intermediate")
+  targetSkills       String // JSON array of skills
+  requirements       String // JSON array of requirement strings
+  expectedOutcome    String
+  starterCode        String?
+  evaluationCriteria String // JSON array of criteria
+  estimatedMinutes   Int              @default(60)
+  status             String           @default("available") // available, in_progress, submitted, completed
+  profile            LearnerProfile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  roadmapItem        RoadmapItem?     @relation(fields: [roadmapItemId], references: [id], onDelete: SetNull)
+  submissions        TaskSubmission[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model TaskSubmission {
+  id          String          @id @default(cuid())
+  taskId      String
+  profileId   String
+  submittedCode String?
+  submittedText String?
+  githubUrl   String?
+  task        Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  profile     LearnerProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  evaluation  TaskEvaluation?
+  createdAt   DateTime        @default(now())
+}
+
+model TaskEvaluation {
+  id                 String         @id @default(cuid())
+  submissionId       String         @unique
+  overallScore       Int // 0 to 100
+  isPassing          Boolean        @default(true)
+  skillsDemonstrated String // JSON array
+  weakAreas          String // JSON array
+  strengths          String // JSON array
+  feedback           String // JSON array of { category, comment, severity }
+  recommendedNextAction String
+  submission         TaskSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  createdAt          DateTime       @default(now())
+}
+
+model ProgressHistory {
+  id         String   @id @default(cuid())
+  profileId  String
+  metric     String // readiness, skill_confidence, task_score
+  value      Float
+  metadata   String? // JSON string
+  createdAt  DateTime @default(now())
+}
+
+model AgentEvent {
+  id          String         @id @default(cuid())
+  profileId   String
+  agentName   String // ProfileAgent, SkillGapAgent, RoadmapAgent, EvaluationAgent, AdaptationAgent, ChatAgent
+  action      String // extracted_skills, detected_gaps, generated_roadmap, adapted_roadmap, etc.
+  description String
+  evidence    String?
+  inputData   String? // JSON
+  outputData  String? // JSON
+  profile     LearnerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+}
+
+model LearnerMemory {
+  id          String         @id @default(cuid())
+  profileId   String
+  category    String // weak_area, strong_area, learning_preference, milestone_note
+  key         String
+  value       String
+  confidence  Float          @default(1.0)
+  evidence    String?
+  profile     LearnerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model GeneratedProject {
+  id                 String         @id @default(cuid())
+  profileId          String
+  title              String
+  description        String
+  difficulty         String         @default("intermediate")
+  skillsDeveloped    String // JSON array
+  whyThisProject     String
+  requirements       String // JSON array
+  evaluationCriteria String // JSON array
+  estimatedHours     Int            @default(12)
+  status             String         @default("recommended") // recommended, in_progress, completed
+  profile            LearnerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
